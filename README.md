@@ -1,107 +1,93 @@
-# Mini Agent
+# senAgent
 
-A self-developed Java Agent Framework based on Spring Boot and AI LLM.
+自研Java Agent框架 - 对标LangGraph/LangChain/OpenClaw
 
-## Features
+## 特性
 
-- 🤖 **AI Integration** - Support for various LLM APIs (OpenAI compatible)
-- 💬 **Chat API** - RESTful chat interface with streaming support
-- 🧠 **Agent Core** - Built-in agent with conversation memory
-- 🔧 **Tool System** - Function calling support
-- 🌊 **Streaming** - Server-Sent Events (SSE) for real-time responses
-- 🔄 **CORS Enabled** - Easy frontend integration
+### 🤖 多Agent支持
+- **MiniAgent** - 基础对话Agent
+- **FnCallAgent** - 函数调用Agent  
+- **ReActAgent** - ReAct推理Agent
+- **CodeAgent** - 代码助手
+- **BrowserAgent** - 浏览器助手
+- **RunnableAgent** - LCEL风格Agent
 
-## Quick Start
+### 🔗 LangGraph核心
+- **StateGraph** - 状态图
+- **Node/Edge** - 节点和边
+- **条件路由** - Conditional Edge
 
-### Prerequisites
+### ⛓️ LangChain LCEL
+- **Chain** - 链式调用
+- **Pipe** - 管道组合
+- **Parallel** - 并行执行
+- **Batch** - 批量处理
 
-- JDK 17+
-- Maven 3.8+
+### 🧠 记忆系统
+- **ChatMemory** - 对话记忆
+- **SummaryMemory** - 摘要记忆
+- **短时/长时记忆**
 
-### Build
+### 📚 RAG/向量
+- **VectorStore** - 向量存储
+- **RAGEngine** - RAG引擎
+- **DocumentLoader** - 文档加载
+
+### 🔧 MCP协议
+- **MCPServer** - MCP服务器
+- **Tool/Resource/Prompt** - MCP组件
+
+### 🛠️ 工具集
+- Python沙箱
+- 网页搜索
+- 天气查询
+- 新闻获取
+- 文件操作
+
+### ⚡ 工作流
+- **WorkflowEngine** - 工作流引擎
+- 顺序/并行/条件分支
+
+## 快速开始
 
 ```bash
+# 克隆
+git clone https://github.com/Senrian/sen-agent.git
+cd sen-agent
+
+# 编译
 mvn clean package -DskipTests
-```
 
-### Run
-
-```bash
-# Set API key
-export AI_API_KEY=your-api-key-here
-
-# Run
+# 运行
+export DEEPSEEK_API_KEY=your-api-key
 java -jar target/sen-agent-0.0.1-SNAPSHOT.jar
-
-# Or use Spring Boot
-mvn spring-boot:run
 ```
 
-## Configuration
+## API
 
-Edit `src/main/resources/application.yml`:
+- `POST /api/chat` - 聊天
+- `POST /api/agent` - 创建Agent
+- `POST /api/graph` - 状态图
+- `POST /api/stream/chat` - 流式聊天
 
-```yaml
-server:
-  port: 8080
+## Demo
 
-ai:
-  api-key: ${AI_API_KEY}
-  base-url: https://api.minimaxi.com/v1
-  model: MiniMax-M2.5
-  max-tokens: 4096
-  temperature: 0.7
+访问 http://localhost:8080
 
-agent:
-  system-prompt: You are a helpful AI assistant.
-  max-history: 10
-```
-
-## API Endpoints
-
-### Health Check
-
-```bash
-GET /api/health
-```
-
-### Chat
-
-```bash
-POST /api/chat
-Content-Type: application/json
-
-{
-  "messages": [
-    {"role": "user", "content": "Hello!"}
-  ]
-}
-```
-
-### Stream Chat
-
-```bash
-POST /api/chat/stream
-Content-Type: application/json
-
-{
-  "messages": [
-    {"role": "user", "content": "Tell me a story"}
-  ]
-}
-```
-
-## Architecture
+## 模块
 
 ```
 sen-agent/
-├── config/          # Configuration classes
-├── controller/      # REST API controllers
-├── model/           # Data models
-├── service/         # Business services
-├── agent/           # Agent core
-├── tool/            # Tool system
-└── exception/       # Exception handling
+├── agent/        # Agent实现
+├── graph/        # LangGraph
+├── chain/        # LCEL
+├── rag/          # RAG
+├── memory/       # 记忆
+├── mcp/          # MCP
+├── workflow/     # 工作流
+├── skill/        # Skill
+├── tool/         # 工具
+└── controller/   # API
 ```
 
 ## License
