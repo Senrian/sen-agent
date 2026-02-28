@@ -6,266 +6,204 @@ import com.senagent.service.AiService;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 /**
- * ReAct Agent - 推理+行动 Agent
- * 对标 Qwen-Agent 的 ReAct Chat
+ * ReAct Agent - 改进版
  * 
- * 采用 ReAct (Reasoning + Acting) 模式:
- * 1. Thought: 思考当前情况
- * 2. Action: 执行工具
- * 3. Observation: 观察结果
- * 4. 重复直到完成任务
+ * 实现ReAct (Reasoning + Acting) 模式:
+ * - Thought: 思考
+ * - Action: 行动
+ * - Observation: 观察
+ * - 循环直到完成
  */
 @Slf4j
-@Data
 public class ReActAgent {
 
     private String id;
     private String name;
     private String systemPrompt;
     private List<ChatRequest.Message> history;
-    private List<ReActStep> reasoningTrace;
     private AiService aiService;
-    private Map<String, FnCallAgent.ToolExecutor> tools;
-    private Integer maxIterations;
+    private Map<String, Tool> tools;
+    private int maxIterations;
+    private boolean verbose;
 
-    public ReActAgent(AiService aiService, String systemPrompt, Map<String, FnCallAgent.ToolExecutor> tools) {
+    public ReActAgent(AiService aiService, String systemPrompt) {
+        this(aiService, systemPrompt, new HashMap<>());
+    }
+
+    public ReActAgent(AiService aiService, String systemPrompt, Map<String, Tool> tools) {
         this.id = UUID.randomUUID().toString();
         this.aiService = aiService;
         this.systemPrompt = systemPrompt;
-        this.history = new ArrayList<>();
-        this.reasoningTrace = new ArrayList<>();
         this.tools = tools;
+        this.history = new ArrayList<>();
         this.maxIterations = 10;
+        this.verbose = false;
     }
 
     /**
-     * 执行ReAct对话
+     * 执行对话
      */
-    public ReActResult chat(String userMessage) {
-        reasoningTrace.clear();
-        addMessage("user", userMessage);
+    public Result chat(String userMessage) {
+        history.add(createMessage("user", userMessage));
         
-        String userPrompt = buildReActPrompt(userMessage);
+        String currentThought = "";
+        String currentAction = "";
+        String currentObservation = "";
         
-        int iteration = 0;
-        String finalAnswer = null;
-        
-        while (iteration < maxIterations) {
-            iteration++;
+        for (int i = 0; i < maxIterations; i++) {
+            // 构建提示
+            String prompt = buildPrompt(userMessage, currentThought, currentAction, currentObservation);
             
-            // 构建请求
+            // 调用LLM
             ChatRequest request = new ChatRequest();
-            request.setMessages(buildMessages(userPrompt));
-            request.setSystemPrompt(getReActSystemPrompt());
+            request.setMessages(List.of(createMessage("user", prompt)));
+            request.setSystemPrompt(systemPrompt);
             
-            // 发送请求
             ChatResponse response = aiService.chat(request);
             String content = response.getContent();
             
-            // 解析ReAct步骤
-            ReActStep step = parseReActStep(content);
+            // 解析响应
+            ParsedStep step = parseStep(content);
             
             if (step == null) {
-                // 没有有效的ReAct步骤，可能是最终答案
-                finalAnswer = content;
-                addMessage("assistant", content);
-                break;
+                // 没有有效的步骤，返回结果
+                history.add(createMessage("assistant", content));
+                return new Result(content, i + 1, false);
             }
             
-            reasoningTrace.add(step);
+            currentThought = step.thought;
+            currentAction = step.action;
             
-            if ("finish".equalsIgnoreCase(step.getAction())) {
-                // 完成任务
-                finalAnswer = step.getObservation();
-                addMessage("assistant", finalAnswer);
-                break;
+            // 执行动作
+            if ("finish".equalsIgnoreCase(step.action)) {
+                history.add(createMessage("assistant", step.observation));
+                return new Result(step.observation, i + 1, true);
             }
             
             // 执行工具
-            if (tools != null && tools.containsKey(step.getAction())) {
-                try {
-                    Map<String, Object> params = parseActionInput(step.getActionInput());
-                    Object result = tools.get(step.getAction()).execute(params);
-                    step.setObservation("Result: " + (result != null ? result.toString() : "null"));
-                } catch (Exception e) {
-                    step.setObservation("Error: " + e.getMessage());
-                }
-            } else if (!"finish".equalsIgnoreCase(step.getAction())) {
-                step.setObservation("Unknown action: " + step.getAction());
-            }
+            currentObservation = executeTool(step.action, step.actionInput);
             
-            // 添加思考到历史
-            userPrompt += "\n\n" + formatReActStep(step);
+            if (verbose) {
+                log.info("Step {}: {} -> {} -> {}", i + 1, step.thought, step.action, currentObservation);
+            }
         }
         
-        if (finalAnswer == null) {
-            finalAnswer = "已达到最大迭代次数";
-        }
-        
-        return new ReActResult(finalAnswer, new ArrayList<>(reasoningTrace), iteration);
+        // 超时
+        String finalMsg = "达到最大迭代次数 " + maxIterations;
+        history.add(createMessage("assistant", finalMsg));
+        return new Result(finalMsg, maxIterations, false);
     }
 
-    /**
-     * 构建ReAct提示
-     */
-    private String buildReActPrompt(String userMessage) {
+    private String buildPrompt(String userMessage, String thought, String action, String observation) {
         StringBuilder sb = new StringBuilder();
+        
         sb.append("Question: ").append(userMessage).append("\n\n");
         
-        // 添加之前的思考
-        for (ReActStep step : reasoningTrace) {
-            sb.append(formatReActStep(step));
+        if (!thought.isEmpty()) {
+            sb.append("Thought: ").append(thought).append("\n");
+        }
+        if (!action.isEmpty()) {
+            sb.append("Action: ").append(action).append("\n");
+        }
+        if (!observation.isEmpty()) {
+            sb.append("Observation: ").append(observation).append("\n");
+        }
+        
+        sb.append("\n请按以下格式回答:\n");
+        sb.append("Thought: [你的思考]\n");
+        sb.append("Action: [工具名 或 finish]\n");
+        sb.append("Action Input: [工具输入]\n");
+        
+        if (!tools.isEmpty()) {
+            sb.append("\n可用工具: ").append(String.join(", ", tools.keySet()));
         }
         
         return sb.toString();
     }
 
-    /**
-     * 构建消息列表
-     */
-    private List<ChatRequest.Message> buildMessages(String userPrompt) {
-        List<ChatRequest.Message> messages = new ArrayList<>();
+    private ParsedStep parseStep(String content) {
+        if (content == null || content.isEmpty()) return null;
         
-        // 系统消息
-        ChatRequest.Message systemMsg = new ChatRequest.Message();
-        systemMsg.setRole("system");
-        systemMsg.setContent(getReActSystemPrompt());
-        messages.add(systemMsg);
-        
-        // 用户消息
-        ChatRequest.Message userMsg = new ChatRequest.Message();
-        userMsg.setRole("user");
-        userMsg.setContent(userPrompt);
-        messages.add(userMsg);
-        
-        return messages;
-    }
-
-    /**
-     * ReAct系统提示
-     */
-    private String getReActSystemPrompt() {
-        return systemPrompt + "\n\n" +
-            "You are a ReAct agent. Follow this format:\n\n" +
-            "Thought: [your reasoning about what to do next]\n" +
-            "Action: [tool name to use, or 'finish' if done]\n" +
-            "Action Input: [input to the tool in JSON format]\n" +
-            "Observation: [result from the tool]\n\n" +
-            "Available tools: " + getAvailableTools() + "\n\n" +
-            "Repeat Thought->Action->Action Input->Observation until you can answer the question.\n" +
-            "When done, use 'finish' as the action with your final answer in the observation.";
-    }
-
-    /**
-     * 获取可用工具列表
-     */
-    private String getAvailableTools() {
-        if (tools == null || tools.isEmpty()) {
-            return "none";
-        }
-        return String.join(", ", tools.keySet());
-    }
-
-    /**
-     * 解析ReAct步骤
-     */
-    private ReActStep parseReActStep(String content) {
-        if (content == null) return null;
-        
-        ReActStep step = new ReActStep();
+        ParsedStep step = new ParsedStep();
         
         String[] lines = content.split("\n");
         for (String line : lines) {
             line = line.trim();
             if (line.startsWith("Thought:")) {
-                step.setThought(line.substring("Thought:".length()).trim());
+                step.thought = line.substring("Thought:".length()).trim();
             } else if (line.startsWith("Action:")) {
-                step.setAction(line.substring("Action:".length()).trim());
+                step.action = line.substring("Action:".length()).trim();
             } else if (line.startsWith("Action Input:")) {
-                step.setActionInput(line.substring("Action Input:".length()).trim());
+                step.actionInput = line.substring("Action Input:".length()).trim();
             } else if (line.startsWith("Observation:")) {
-                step.setObservation(line.substring("Observation:".length()).trim());
+                step.observation = line.substring("Observation:".length()).trim();
             }
         }
         
-        // 必须有action才算有效步骤
-        if (step.getAction() == null || step.getAction().isEmpty()) {
-            return null;
+        return step.action != null && !step.action.isEmpty() ? step : null;
+    }
+
+    private String executeTool(String action, String actionInput) {
+        Tool tool = tools.get(action);
+        if (tool == null) {
+            return "工具不存在: " + action;
         }
         
-        return step;
+        try {
+            Map<String, Object> args = parseJson(actionInput);
+            Object result = tool.execute(args);
+            return result != null ? result.toString() : "null";
+        } catch (Exception e) {
+            return "错误: " + e.getMessage();
+        }
     }
 
-    /**
-     * 格式化ReAct步骤
-     */
-    private String formatReActStep(ReActStep step) {
-        StringBuilder sb = new StringBuilder();
-        if (step.getThought() != null) {
-            sb.append("Thought: ").append(step.getThought()).append("\n");
-        }
-        if (step.getAction() != null) {
-            sb.append("Action: ").append(step.getAction()).append("\n");
-        }
-        if (step.getActionInput() != null) {
-            sb.append("Action Input: ").append(step.getActionInput()).append("\n");
-        }
-        if (step.getObservation() != null) {
-            sb.append("Observation: ").append(step.getObservation()).append("\n");
-        }
-        return sb.toString();
-    }
-
-    /**
-     * 解析action input
-     */
     @SuppressWarnings("unchecked")
-    private Map<String, Object> parseActionInput(String input) {
-        if (input == null || input.isEmpty()) {
-            return Map.of();
-        }
+    private Map<String, Object> parseJson(String json) {
+        if (json == null || json.isEmpty()) return new HashMap<>();
         try {
             com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
-            return mapper.readValue(input, Map.class);
+            return mapper.readValue(json, Map.class);
         } catch (Exception e) {
-            return Map.of("input", input);
+            Map<String, Object> result = new HashMap<>();
+            result.put("input", json);
+            return result;
         }
     }
 
-    /**
-     * 添加消息
-     */
-    private void addMessage(String role, String content) {
+    private ChatRequest.Message createMessage(String role, String content) {
         ChatRequest.Message msg = new ChatRequest.Message();
         msg.setRole(role);
         msg.setContent(content);
-        history.add(msg);
+        return msg;
     }
 
-    /**
-     * ReAct步骤
-     */
-    @Data
-    public static class ReActStep {
-        private String thought;
-        private String action;
-        private String actionInput;
-        private String observation;
+    // Setters
+    public void setTools(Map<String, Tool> tools) { this.tools = tools; }
+    public void setMaxIterations(int maxIterations) { this.maxIterations = maxIterations; }
+    public void setVerbose(boolean verbose) { this.verbose = verbose; }
+    public void clearHistory() { history.clear(); }
+
+    // Tool接口
+    public interface Tool {
+        Object execute(Map<String, Object> args) throws Exception;
     }
 
-    /**
-     * 执行结果
-     */
     @Data
-    public static class ReActResult {
-        private final String answer;
-        private final List<ReActStep> reasoningTrace;
+    private static class ParsedStep {
+        String thought;
+        String action;
+        String actionInput;
+        String observation;
+    }
+
+    @Data
+    public static class Result {
+        private final String output;
         private final int iterations;
+        private final boolean finished;
     }
 }
