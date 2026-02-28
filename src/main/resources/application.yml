@@ -1,0 +1,33 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: sen-agent
+
+ai:
+  # DeepSeek配置
+  provider: deepseek
+  api-key: ${DEEPSEEK_API_KEY:}
+  base-url: https://api.deepseek.com/v1
+  model: deepseek-chat
+  max-tokens: 4096
+  temperature: 0.7
+  timeout: 120000
+  # 系统提示词
+  system-prompt: You are a helpful AI assistant.
+
+agent:
+  # Agent默认配置
+  max-history: 20
+  max-iterations: 10
+
+# 服务器配置
+server:
+  port: ${SERVER_PORT:8080}
+
+# 日志配置
+logging:
+  level:
+    com.senagent: DEBUG
+    org.springframework: INFO
