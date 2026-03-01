@@ -32,7 +32,7 @@ git clone https://github.com/Senrian/sen-agent.git
 cd sen-agent
 
 # 4. 设置API Key
-export DEEPSEEK_API_KEY=sk-ec738a517c1f4d7dbf6efc3cab081f7a
+export DEEPSEEK_API_KEY=sk-your-api-key-here
 
 # 5. 编译
 mvn clean package -DskipTests
