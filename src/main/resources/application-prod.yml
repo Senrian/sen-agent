@@ -1,0 +1,75 @@
+# sen-agent 生产配置
+# 环境变量优先级: 环境变量 > 配置项 > 默认值
+
+server:
+  port: ${SERVER_PORT:8080}
+  host: ${SERVER_HOST:0.0.0.0}
+
+# AI配置
+ai:
+  provider: ${AI_PROVIDER:deepseek}
+  api-key: ${DEEPSEEK_API_KEY:}
+  base-url: ${AI_BASE_URL:https://api.deepseek.com/v1}
+  model: ${AI_MODEL:deepseek-chat}
+  max-tokens: ${AI_MAX_TOKENS:4096}
+  temperature: ${AI_TEMPERATURE:0.7}
+  timeout: ${AI_TIMEOUT:120000}
+  stream-enabled: ${AI_STREAM_ENABLED:true}
+  retry:
+    enabled: ${AI_RETRY_ENABLED:true}
+    max-attempts: ${AI_RETRY_MAX_ATTEMPTS:3}
+    delay-ms: ${AI_RETRY_DELAY_MS:1000}
+    backoff-multiplier: ${AI_RETRY_BACKOFF:2.0}
+
+# Agent配置
+agent:
+  max-history: ${AGENT_MAX_HISTORY:20}
+  max-iterations: ${AGENT_MAX_ITERATIONS:10}
+  default-timeout: ${AGENT_DEFAULT_TIMEOUT:60000}
+
+# 工具配置
+tool:
+  python-enabled: ${TOOL_PYTHON_ENABLED:true}
+  python-timeout: ${TOOL_PYTHON_TIMEOUT:30}
+  python-max-memory: ${TOOL_PYTHON_MAX_MEMORY:512}
+  web-search-enabled: ${TOOL_WEB_SEARCH_ENABLED:true}
+  web-search-timeout: ${TOOL_WEB_SEARCH_TIMEOUT:10000}
+  weather-enabled: ${TOOL_WEATHER_ENABLED:true}
+  news-enabled: ${TOOL_NEWS_ENABLED:true}
+  file-enabled: ${TOOL_FILE_ENABLED:true}
+  file-base-dir: ${TOOL_FILE_BASE_DIR:/tmp/sen-agent-files}
+  max-file-size: ${TOOL_MAX_FILE_SIZE:10}
+
+# 安全配置
+security:
+  enabled: ${SECURITY_ENABLED:true}
+  input-max-length: ${SECURITY_INPUT_MAX_LENGTH:10000}
+  rate-limit:
+    enabled: ${SECURITY_RATE_LIMIT_ENABLED:true}
+    max-requests: ${SECURITY_RATE_LIMIT_MAX_REQUESTS:100}
+    window-ms: ${SECURITY_RATE_LIMIT_WINDOW_MS:60000}
+
+# 插件配置
+plugin:
+  enabled: ${PLUGIN_ENABLED:true}
+  auto-load: ${PLUGIN_AUTO_LOAD:true}
+  scan-packages: ${PLUGIN_SCAN_PACKAGES:com.senagent.plugin}
+
+# 监控配置
+monitor:
+  enabled: ${MONITOR_ENABLED:true}
+  metrics-enabled: ${MONITOR_METRICS_ENABLED:true}
+  log-level: ${MONITOR_LOG_LEVEL:INFO}
+
+# 日志配置
+logging:
+  level:
+    root: ${LOG_LEVEL:INFO}
+    com.senagent: ${LOG_LEVEL_APP:DEBUG}
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+
+# CORS
+cors:
+  enabled: ${CORS_ENABLED:true}
+  allowed-origins: ${CORS_ALLOWED_ORIGINS:*}
