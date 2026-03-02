@@ -1,0 +1,77 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: sen-agent
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:default}
+
+# AI配置
+ai:
+  provider: deepseek
+  api-key: ${DEEPSEEK_API_KEY:}
+  base-url: https://api.deepseek.com/v1
+  model: deepseek-chat
+  max-tokens: 4096
+  temperature: 0.7
+  timeout: 120000
+  system-prompt: You are a helpful AI assistant.
+  stream-enabled: true
+  retry:
+    enabled: true
+    max-attempts: 3
+    delay-ms: 1000
+    backoff-multiplier: 2.0
+
+# Agent配置
+agent:
+  max-history: 20
+  max-iterations: 10
+
+# 工具配置
+tool:
+  python-enabled: true
+  python-timeout: 30
+  python-max-memory: 512
+  web-search-enabled: true
+  web-search-timeout: 10000
+  weather-enabled: true
+  news-enabled: true
+  file-enabled: true
+  file-base-dir: /tmp/sen-agent-files
+  max-file-size: 10
+  allowed-extensions:
+    - .txt
+    - .json
+    - .md
+    - .yaml
+    - .xml
+    - .csv
+
+# 安全配置
+security:
+  enabled: true
+  input-max-length: 10000
+  rate-limit:
+    enabled: true
+    max-requests: 100
+    window-ms: 60000
+
+# 插件配置
+plugin:
+  enabled: true
+  auto-load: true
+
+# 监控配置
+monitor:
+  enabled: true
+  metrics-enabled: true
+
+# 日志
+logging:
+  level:
+    root: INFO
+    com.senagent: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"

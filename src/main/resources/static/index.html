@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>senAgent - 全功能演示</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --bg-dark: #0f172a;
+            --bg-card: #1e293b;
+            --bg-input: #334155;
+            --text-main: #f1f5f9;
+            --text-muted: #94a3b8;
+            --border: #475569;
+            --success: #22c55e;
+            --error: #ef4444;
+            --warning: #f59e0b;
+            --purple: #a855f7;
+            --cyan: #06b6d4;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-main);
+            min-height: 100vh;
+        }
+        .header {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            padding: 20px 32px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .logo {
+            font-size: 28px;
+            font-weight: bold;
+            background: linear-gradient(135deg, #60a5fa, #a78bfa, #f472b6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .header-right {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+        }
+        .model-badge {
+            background: rgba(37, 99, 235, 0.2);
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            color: #60a5fa;
+            border: 1px solid rgba(37, 99, 235, 0.3);
+        }
+        .btn {
+            padding: 8px 16px;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-main);
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+        .btn:hover { border-color: var(--primary); }
+        .main {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 24px;
+            display: grid;
+            grid-template-columns: 240px 1fr 280px;
+            gap: 20px;
+            height: calc(100vh - 80px);
+        }
+        .sidebar {
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        .section-title {
+            font-size: 11px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 16px;
+        }
+        .agent-list { display: flex; flex-direction: column; gap: 8px; }
+        .agent-btn {
+            padding: 14px 16px;
+            background: var(--bg-input);
+            border: 1px solid transparent;
+            border-radius: 12px;
+            color: var(--text-main);
+            cursor: pointer;
+            text-align: left;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .agent-btn:hover { transform: translateX(4px); border-color: var(--primary); }
+        .agent-btn.active { background: linear-gradient(135deg, rgba(37,99,235,0.2) 0%, rgba(168,85,247,0.1) 100%); border-color: var(--primary); }
+        .agent-icon { font-size: 22px; }
+        .agent-name { font-weight: 600; font-size: 14px; display: block; }
+        .agent-desc { font-size: 11px; color: var(--text-muted); }
+        .chat-container {
+            background: var(--bg-card);
+            border-radius: 16px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+        .chat-header {
+            padding: 16px 24px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .chat-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 600;
+            font-size: 16px;
+        }
+        .chat-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: var(--success);
+        }
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--success);
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .chat-messages {
+            flex: 1;
+            padding: 24px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .message {
+            max-width: 85%;
+            padding: 16px 20px;
+            border-radius: 16px;
+            line-height: 1.7;
+            animation: fadeIn 0.3s ease;
+        }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .message.user { align-self: flex-end; background: linear-gradient(135deg, var(--primary) 0%, #3b82f6 100%); }
+        .message.assistant { align-self: flex-start; background: var(--bg-input); }
+        .message-label {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .message-content code {
+            background: rgba(0,0,0,0.3);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Monaco', monospace;
+        }
+        .message-content pre {
+            background: rgba(0,0,0,0.4);
+            padding: 12px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 10px 0;
+        }
+        .chat-input {
+            padding: 20px 24px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            gap: 12px;
+            background: rgba(30, 41, 59, 0.5);
+        }
+        .chat-input input {
+            flex: 1;
+            padding: 14px 20px;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            color: var(--text-main);
+            font-size: 14px;
+            outline: none;
+            transition: border 0.2s;
+        }
+        .chat-input input:focus { border-color: var(--primary); }
+        .chat-input button {
+            padding: 14px 32px;
+            background: linear-gradient(135deg, var(--primary) 0%, #3b82f6 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        .chat-input button:hover { transform: scale(1.02); box-shadow: 0 4px 20px rgba(37, 99, 235, 0.4); }
+        .chat-input button:disabled { opacity: 0.5; cursor: not-allowed; }
+        .right-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .panel {
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 20px;
+        }
+        .panel-title {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+        .stat-card {
+            background: var(--bg-input);
+            padding: 16px;
+            border-radius: 12px;
+            text-align: center;
+        }
+        .stat-value { font-size: 24px; font-weight: bold; background: linear-gradient(135deg, #60a5fa, #a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .stat-label { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+        .tool-item, .skill-item {
+            padding: 12px;
+            background: var(--bg-input);
+            border-radius: 10px;
+            margin-bottom: 10px;
+            font-size: 13px;
+            border-left: 3px solid var(--primary);
+        }
+        .tool-item .name { color: var(--cyan); font-weight: 600; }
+        .skill-item .name { color: var(--success); font-weight: 600; }
+        .loading {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--text-muted);
+            padding: 16px 20px;
+        }
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .welcome-message {
+            text-align: center;
+            padding: 40px;
+        }
+        .welcome-message h2 {
+            background: linear-gradient(135deg, #60a5fa, #a78bfa, #f472b6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-size: 28px;
+            margin-bottom: 20px;
+        }
+        .features {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            margin-top: 30px;
+        }
+        .feature {
+            background: var(--bg-input);
+            padding: 20px;
+            border-radius: 12px;
+            text-align: left;
+        }
+        .feature-icon { font-size: 24px; margin-bottom: 10px; }
+        .feature-title { font-weight: 600; margin-bottom: 6px; }
+        .feature-desc { font-size: 12px; color: var(--text-muted); }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="logo">🤖 senAgent</div>
+        <div class="header-right">
+            <span class="model-badge">🔮 DeepSeek-Chat</span>
+            <button class="btn" onclick="clearChat()">🗑️ 清空</button>
+            <button class="btn" onclick="showSettings()">⚙️</button>
+        </div>
+    </header>
+    
+    <div class="main">
+        <aside class="sidebar">
+            <div class="section-title">🤖 选择 Agent</div>
+            <div class="agent-list" id="agentList"></div>
+            
+            <div class="section-title" style="margin-top: 24px;">💡 Skills</div>
+            <div id="skillList"></div>
+        </aside>
+        
+        <section class="chat-container">
+            <div class="chat-header">
+                <div class="chat-title">
+                    <span id="agentIcon">💬</span>
+                    <span id="agentName">智能助手</span>
+                </div>
+                <div class="chat-status">
+                    <div class="status-dot"></div>
+                    <span>在线</span>
+                </div>
+            </div>
+            
+            <div class="chat-messages" id="messages">
+                <div class="welcome-message">
+                    <h2>欢迎使用 senAgent</h2>
+                    <p style="color: var(--text-muted);">基于 DeepSeek 大模型的智能助手框架</p>
+                    <div class="features">
+                        <div class="feature">
+                            <div class="feature-icon">🧠</div>
+                            <div class="feature-title">多Agent</div>
+                            <div class="feature-desc">7种专业Agent模式</div>
+                        </div>
+                        <div class="feature">
+                            <div class="feature-icon">🔧</div>
+                            <div class="feature-title">工具系统</div>
+                            <div class="feature-desc">Python沙箱、搜索、浏览器</div>
+                        </div>
+                        <div class="feature">
+                            <div class="feature-icon">⚡</div>
+                            <div class="feature-title">Skills</div>
+                            <div class="feature-desc">可扩展技能系统</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="chat-input">
+                <input type="text" id="userInput" placeholder="输入消息，按Enter发送..." onkeypress="handleKeyPress(event)">
+                <button onclick="sendMessage()" id="sendBtn">发送</button>
+            </div>
+        </section>
+        
+        <aside class="right-panel">
+            <div class="panel">
+                <div class="panel-title">📊 统计</div>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value" id="msgCount">0</div>
+                        <div class="stat-label">消息数</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="tokenCount">0</div>
+                        <div class="stat-label">Tokens</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="panel">
+                <div class="panel-title">🔧 可用工具</div>
+                <div id="toolList"></div>
+            </div>
+            
+            <div class="panel">
+                <div class="panel-title">💡 快速示例</div>
+                <div style="font-size: 12px; color: var(--text-muted); line-height: 1.8;">
+                    • "用Python写一个快速排序"<br>
+                    • "帮我查下北京天气"<br>
+                    • "今天的科技新闻有哪些"<br>
+                    • "解释一下什么是递归"
+                </div>
+            </div>
+        </aside>
+    </div>
+    
+    <script>
+        const API_BASE = window.location.origin;
+        
+        const agents = [
+            { id: 'assistant', icon: '💬', name: '智能助手', desc: '通用对话', 
+              prompt: 'You are a helpful AI assistant.', tools: [] },
+            { id: 'coder', icon: '💻', name: '代码助手', desc: '编程问题', 
+              prompt: 'You are an expert programming assistant. Help write, debug, and explain code.', 
+              tools: ['python_sandbox', 'web_search'] },
+            { id: 'analyst', icon: '📊', name: '数据分析师', desc: '数据处理', 
+              prompt: 'You are a data analyst. Analyze data and create visualizations.', 
+              tools: ['python_sandbox'] },
+            { id: 'researcher', icon: '🔍', name: '研究助手', desc: '信息搜集', 
+              prompt: 'You are a research assistant. Gather and analyze information.', 
+              tools: ['web_search', 'web_extractor'] },
+            { id: 'writer', icon: '✍️', name: '写作助手', desc: '文章撰写', 
+              prompt: 'You are a professional writing assistant.', tools: [] },
+            { id: 'browser', icon: '🌐', name: '浏览器助手', desc: '网页操作', 
+              prompt: 'You are a web browsing assistant. Help navigate and extract web content.', 
+              tools: ['web_search', 'web_extractor', 'python_sandbox'] },
+            { id: 'math', icon: '🧮', name: '数学家', desc: '计算推理', 
+              prompt: 'You are a mathematician. Solve problems step by step.', 
+              tools: ['python_sandbox'] },
+        ];
+        
+        const skills = [
+            { name: 'web_search', desc: '网页搜索' },
+            { name: 'web_extract', desc: '网页抓取' },
+            { name: 'python_execute', desc: '代码执行' },
+            { name: 'weather', desc: '天气查询' },
+            { name: 'news', desc: '新闻获取' },
+        ];
+        
+        const tools = [
+            { name: 'python_sandbox', desc: 'Python沙箱执行' },
+            { name: 'web_search', desc: '网页搜索' },
+            { name: 'web_extractor', desc: '内容提取' },
+            { name: 'weather', desc: '天气查询' },
+            { name: 'news', desc: '新闻获取' },
+        ];
+        
+        let currentAgent = agents[0];
+        let messageCount = 0;
+        
+        function init() {
+            renderAgents();
+            renderSkills();
+            renderTools();
+        }
+        
+        function renderAgents() {
+            document.getElementById('agentList').innerHTML = agents.map(a => `
+                <button class="agent-btn ${a.id === currentAgent.id ? 'active' : ''}" onclick="switchAgent('${a.id}')">
+                    <span class="agent-icon">${a.icon}</span>
+                    <div>
+                        <span class="agent-name">${a.name}</span>
+                        <span class="agent-desc">${a.desc}</span>
+                    </div>
+                </button>
+            `).join('');
+        }
+        
+        function renderSkills() {
+            document.getElementById('skillList').innerHTML = skills.map(s => `
+                <div class="skill-item">
+                    <span class="name">${s.name}</span><br>${s.desc}
+                </div>
+            `).join('');
+        }
+        
+        function renderTools() {
+            document.getElementById('toolList').innerHTML = tools.map(t => `
+                <div class="tool-item">
+                    <span class="name">${t.name}</span><br>${t.desc}
+                </div>
+            `).join('');
+        }
+        
+        function switchAgent(id) {
+            currentAgent = agents.find(a => a.id === id);
+            document.getElementById('agentIcon').textContent = currentAgent.icon;
+            document.getElementById('agentName').textContent = currentAgent.name;
+            
+            document.getElementById('messages').innerHTML = `
+                <div class="message assistant">
+                    <div class="message-label">🤖 ${currentAgent.name}</div>
+                    已切换到 <b>${currentAgent.name}</b> 模式<br>
+                    <span style="color: var(--text-muted)">${currentAgent.desc}</span>
+                </div>
+            `;
+            renderAgents();
+        }
+        
+        function handleKeyPress(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        }
+        
+        async function sendMessage() {
+            const input = document.getElementById('userInput');
+            const message = input.value.trim();
+            if (!message) return;
+            
+            addMessage('user', message);
+            input.value = '';
+            messageCount++;
+            updateStats();
+            
+            const loadingId = showLoading();
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/chat`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        messages: [{ role: 'user', content: message }],
+                        systemPrompt: currentAgent.prompt
+                    })
+                });
+                
+                removeLoading(loadingId);
+                
+                if (!response.ok) throw new Error('请求失败');
+                
+                const data = await response.json();
+                const content = data.content || data.response || JSON.stringify(data, null, 2);
+                addMessage('assistant', content);
+                messageCount++;
+                updateStats();
+                
+            } catch (error) {
+                removeLoading(loadingId);
+                addMessage('assistant', '❌ 错误: ' + error.message);
+            }
+        }
+        
+        function addMessage(role, content) {
+            const container = document.getElementById('messages');
+            const div = document.createElement('div');
+            div.className = `message ${role}`;
+            
+            content = content.replace(/`([^`]+)`/g, '<code>$1</code>');
+            content = content.replace(/\n/g, '<br>');
+            
+            div.innerHTML = `<div class="message-label">${role === 'user' ? '👤 你' : '🤖 ' + currentAgent.name}</div><div class="message-content">${content}</div>`;
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+        }
+        
+        function showLoading() {
+            const container = document.getElementById('messages');
+            const id = 'loading-' + Date.now();
+            const div = document.createElement('div');
+            div.id = id;
+            div.className = 'loading';
+            div.innerHTML = '<div class="spinner"></div><span>思考中...</span>';
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+            return id;
+        }
+        
+        function removeLoading(id) {
+            const el = document.getElementById(id);
+            if (el) el.remove();
+        }
+        
+        function clearChat() {
+            document.getElementById('messages').innerHTML = `
+                <div class="message assistant">
+                    <div class="message-label">🤖 senAgent</div>
+                    对话已清空，重新开始吧！
+                </div>
+            `;
+            messageCount = 0;
+            updateStats();
+        }
+        
+        function updateStats() {
+            document.getElementById('msgCount').textContent = messageCount;
+            document.getElementById('tokenCount').textContent = Math.floor(messageCount * 150);
+        }
+        
+        function showSettings() {
+            alert('设置开发中...\n模型: DeepSeek-Chat\nAPI: ' + API_BASE);
+        }
+        
+        init();
+    </script>
+</body>
+</html>

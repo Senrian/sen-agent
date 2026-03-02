@@ -1,0 +1,25 @@
+---
+name: github
+description: "Interact with GitHub using GitHub API. Manage issues, PRs, repos."
+emoji: 🐙
+tools:
+  - gh_api
+  - web_request
+---
+
+# GitHub Skill
+
+Use GitHub API to interact with repositories, issues, and pull requests.
+
+## Capabilities
+
+- List and search issues
+- Create/update/close issues
+- List pull requests
+- Get repository information
+- Search code
+- Manage workflows
+
+## Usage
+
+When user asks about GitHub, use this skill to help them.
